@@ -1,9 +1,27 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 
-export default async function PhotosPage() {
+const FILTERS = [
+  { label: "All photographs", value: "" },
+  { label: "Cambodia", value: "cambodia" },
+  { label: "Landscape", value: "landscape" },
+  { label: "Portrait", value: "portrait" },
+  { label: "Architecture", value: "architecture" },
+];
+
+export default async function PhotosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}) {
+  const params = await searchParams;
+  const category = (params.category || "").toLowerCase();
+
   const photos = await prisma.photo.findMany({
-    where: { status: "PUBLISHED" },
+    where: {
+      status: "PUBLISHED",
+      ...(category ? { category: { slug: category } } : {}),
+    },
     orderBy: { createdAt: "desc" },
     include: { category: true },
   });
@@ -12,14 +30,32 @@ export default async function PhotosPage() {
     <main className="container section gallery-page">
       <div className="page-heading">
         <p className="eyebrow">THE COLLECTION</p>
-        <h1>Browse photographs</h1>
-        <p className="lead">Original images from Tong An Photography, made in Cambodia and available for licensing.</p>
+        <h1>Photographs from Cambodia</h1>
+        <p className="lead">
+          Original images made by Tong An Photography. Explore by subject and open any
+          photograph to see the story, price and licensing details.
+        </p>
       </div>
 
       <div className="filter-pills" aria-label="Photo collections">
-        {["All photographs", "Cambodia", "Landscape", "Portrait", "Architecture"].map((item, i) => (
-          <span key={item} className={`filter-pill ${i === 0 ? "active" : ""}`}>{item}</span>
-        ))}
+        {FILTERS.map((item) => {
+          const active = item.value === category;
+          return (
+            <Link
+              key={item.label}
+              href={item.value ? `/photos?category=${item.value}` : "/photos"}
+              className={`filter-pill ${active ? "active" : ""}`}
+              aria-current={active ? "page" : undefined}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
+      </div>
+
+      <div className="gallery-toolbar">
+        <span>{photos.length} photograph{photos.length === 1 ? "" : "s"}{category ? ` in ${category}` : ""}</span>
+        <span>Click an image for details →</span>
       </div>
 
       {photos.length ? (
@@ -27,13 +63,13 @@ export default async function PhotosPage() {
           {photos.map((p) => (
             <Link key={p.id} href={`/photos/${p.slug}`} className="card photo-card">
               <div className="photo-image-wrap">
-                <img src={p.previewStorageKey} alt={p.title} loading="lazy" />
+                <img className="photo-grid-image" src={p.previewStorageKey} alt={`${p.title} — ${p.category.name}`} loading="lazy" />
                 <span className="photo-badge">{p.category.name}</span>
               </div>
               <div className="photo-info">
                 <div>
                   <div className="photo-title">{p.title}</div>
-                  <small>Licensed original</small>
+                  <small>Licensed original · Digital download</small>
                 </div>
                 <div className="price">${(p.priceCents / 100).toFixed(2)}</div>
               </div>
@@ -41,7 +77,11 @@ export default async function PhotosPage() {
           ))}
         </div>
       ) : (
-        <div className="empty card">No published photographs yet.</div>
+        <div className="empty card">
+          <strong>No photographs in this collection yet.</strong>
+          <p>Try another collection or browse all photographs.</p>
+          <Link className="btn btn-gold" href="/photos">View all photographs</Link>
+        </div>
       )}
     </main>
   );

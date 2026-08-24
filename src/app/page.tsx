@@ -12,31 +12,47 @@ export default async function Home() {
   return (
     <main>
       <section className="hero">
-        <div className="hero-overlay" />
         <div className="container hero-inner">
           <div className="hero-copy">
             <p className="eyebrow">TONG AN PHOTOGRAPHY · CAMBODIA</p>
-            <h1>Moments worth<br /><em>remembering.</em></h1>
+            <h1>See Cambodia.<br /><em>Keep the moment.</em></h1>
             <p className="lead">
-              Original photography capturing Cambodia, its landscapes, people,
-              and quiet everyday beauty — available as high-quality licensed images.
+              Original photography of Cambodia — landscapes, people, architecture,
+              culture, and the quiet details of everyday life. Browse the collection
+              and license high-quality digital images.
             </p>
             <div className="hero-actions">
               <Link className="btn btn-gold" href="/photos">Explore the Gallery</Link>
-              <Link className="btn btn-ghost" href="/about">About the Photographer</Link>
+              <Link className="btn btn-ghost" href="/about">Meet the Photographer</Link>
+            </div>
+            <div className="hero-proof" aria-label="Store highlights">
+              <span>Original photographs</span>
+              <span>Licensed digital files</span>
+              <span>Payment verified manually</span>
             </div>
           </div>
+
           {photos[0] ? (
             <Link href={`/photos/${photos[0].slug}`} className="hero-image-wrap" aria-label={`View ${photos[0].title}`}>
               <img className="hero-image" src={photos[0].previewStorageKey} alt={photos[0].title} />
-              <span className="hero-caption">{photos[0].title} · {photos[0].category.name}</span>
+              <span className="hero-caption">
+                <strong>{photos[0].title}</strong>
+                <small>{photos[0].category.name} · View photograph →</small>
+              </span>
             </Link>
           ) : (
             <div className="hero-image-wrap">
-              <img className="hero-image" src="/version-3-preview.png" alt="Tong An Photography" />
+              <img className="hero-image" src="/version-3-preview.png" alt="Tong An Photography — Cambodia" />
             </div>
           )}
         </div>
+      </section>
+
+      <section className="container trust-strip" aria-label="Why buy from Tong An Photography">
+        <div><strong>Original work</strong><span>Captured by Tong An</span></div>
+        <div><strong>High-quality files</strong><span>Digital download after approval</span></div>
+        <div><strong>Simple licensing</strong><span>Ask about commercial use</span></div>
+        <div><strong>Human verified</strong><span>Payment reviewed before download</span></div>
       </section>
 
       <section className="container section section-tight">
@@ -44,20 +60,17 @@ export default async function Home() {
           <div>
             <p className="eyebrow">SELECTED WORK</p>
             <h2>Latest photographs</h2>
+            <p className="muted section-description-left">A curated starting point. Open any image for details, licensing information and purchase.</p>
           </div>
-          <Link className="text-link" href="/photos">View all photos <span>→</span></Link>
+          <Link className="text-link" href="/photos">View the full collection <span>→</span></Link>
         </div>
 
         {photos.length ? (
           <div className="photo-grid home-grid">
             {photos.map((p, index) => (
-              <Link
-                key={p.id}
-                href={`/photos/${p.slug}`}
-                className={`card photo-card photo-card-${index % 3}`}
-              >
+              <Link key={p.id} href={`/photos/${p.slug}`} className="card photo-card">
                 <div className="photo-image-wrap">
-                  <img src={p.previewStorageKey} alt={p.title} loading={index > 2 ? "lazy" : "eager"} />
+                  <img className="photo-grid-image" src={p.previewStorageKey} alt={`${p.title} — ${p.category.name}`} loading={index > 2 ? "lazy" : "eager"} />
                   <span className="photo-badge">{p.category.name}</span>
                 </div>
                 <div className="photo-info">
@@ -71,7 +84,11 @@ export default async function Home() {
             ))}
           </div>
         ) : (
-          <div className="empty card">Your published photographs will appear here.</div>
+          <div className="empty card">
+            <strong>The collection is being prepared.</strong>
+            <p>New photographs will appear here soon.</p>
+            <Link className="btn btn-gold" href="/contact">Ask about upcoming work</Link>
+          </div>
         )}
       </section>
 
@@ -79,24 +96,24 @@ export default async function Home() {
         <div className="container section">
           <div className="section-intro centered">
             <div>
-              <p className="eyebrow">EXPLORE</p>
+              <p className="eyebrow">EXPLORE THE COLLECTION</p>
               <h2>Stories through the lens</h2>
               <p className="muted section-description">
-                A visual collection of places, people, and details that make Cambodia unforgettable.
+                Start with a subject, then discover the places, people and details that make Cambodia unforgettable.
               </p>
             </div>
           </div>
           <div className="collection-grid">
             {[
-              ["Cambodia", "Temples, streets & local life"],
-              ["Landscape", "Light, land & open skies"],
-              ["Portrait", "People & personal stories"],
-              ["Architecture", "Shapes, history & detail"],
-            ].map(([title, subtitle]) => (
-              <Link key={title} href="/photos" className="collection-card">
+              ["Cambodia", "Temples, streets & local life", "cambodia"],
+              ["Landscape", "Light, land & open skies", "landscape"],
+              ["Portrait", "People & personal stories", "portrait"],
+              ["Architecture", "Shapes, history & detail", "architecture"],
+            ].map(([title, subtitle, slug]) => (
+              <Link key={title} href={`/photos?category=${slug}`} className="collection-card">
                 <span>{title}</span>
                 <small>{subtitle}</small>
-                <b>Explore →</b>
+                <b>Explore collection →</b>
               </Link>
             ))}
           </div>
@@ -111,11 +128,15 @@ export default async function Home() {
             Every photograph is a small record of a real moment. Tong An Photography
             focuses on authentic Cambodian scenes and timeless images made to be remembered.
           </p>
-          <Link className="btn btn-dark" href="/about">Meet Tong An</Link>
+          <div className="hero-actions">
+            <Link className="btn btn-dark" href="/about">Meet Tong An</Link>
+            <Link className="btn btn-ghost" href="/contact">Licensing enquiries</Link>
+          </div>
         </div>
         <div className="about-note">
           <span className="quote-mark">“</span>
           <p>See the beauty in the ordinary, then preserve it.</p>
+          <small>— Tong An Photography</small>
         </div>
       </section>
     </main>

@@ -53,7 +53,8 @@ function CartContent() {
   return (
     <main className="container section">
       <p className="eyebrow">YOUR CART</p>
-      <h1>Selected Photos</h1>
+      <h1>Your selected photographs</h1>
+      <p className="lead cart-lead">Review your images before payment. Each item is a licensed digital original.</p>
 
       {items.length === 0 ? (
         <div className="card empty">
@@ -67,7 +68,7 @@ function CartContent() {
           <div className="cart-list">
             {items.map((p) => (
               <div className="card cart-item" key={p.id}>
-                <img src={p.previewStorageKey} alt={p.title} />
+                <img src={p.previewStorageKey} alt={`${p.title} — ${p.category}`} loading="lazy" />
                 <div>
                   <h3>{p.title}</h3>
                   <p className="muted">{p.category}</p>
@@ -88,7 +89,7 @@ function CartContent() {
               <strong>${(total / 100).toFixed(2)}</strong>
             </div>
             <Link className="btn btn-gold" href="/checkout">
-              Continue to Payment
+              Continue to secure payment →
             </Link>
           </div>
         </>

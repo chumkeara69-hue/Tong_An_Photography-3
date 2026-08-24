@@ -130,3 +130,12 @@ For production, use two PostgreSQL URLs:
 `prisma.config.ts` automatically prefers `DIRECT_URL` for migration commands and falls back to `DATABASE_URL`.
 
 The existing Prisma migration is ready to create the complete database schema. No real Supabase database can be embedded in this ZIP because it must belong to your Supabase account.
+
+## UI/UX improvements included
+- Stronger photography-first homepage with trust highlights and clearer calls to action.
+- Real category filtering on the gallery (`/photos?category=...`).
+- Improved photo detail/licensing/purchase flow.
+- Public Admin link removed from the main navigation and retained in the footer.
+- Improved About and Contact pages.
+- Better mobile layouts, focus states, accessibility, and empty states.
+- SEO metadata, robots.txt, and sitemap.xml.
