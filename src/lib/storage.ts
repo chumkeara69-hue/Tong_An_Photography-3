@@ -1,4 +1,8 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 function getClient() {
@@ -16,7 +20,8 @@ function getClient() {
     region: process.env.AWS_REGION,
     endpoint: process.env.S3_ENDPOINT,
     credentials:
-      process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+      process.env.AWS_ACCESS_KEY_ID &&
+      process.env.AWS_SECRET_ACCESS_KEY
         ? {
             accessKeyId: process.env.AWS_ACCESS_KEY_ID,
             secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
@@ -28,11 +33,17 @@ function getClient() {
   });
 }
 
-export async function createUploadUrl(key: string, contentType: string) {
+export async function createUploadUrl(
+  key: string,
+  contentType: string,
+) {
   if (process.env.STORAGE_PROVIDER !== "s3") {
     throw new Error("S3 storage is required for production uploads.");
   }
-  if (!contentType) throw new Error("Content type is required.");
+
+  if (!contentType) {
+    throw new Error("Content type is required.");
+  }
 
   const client = getClient();
 
@@ -42,8 +53,23 @@ export async function createUploadUrl(key: string, contentType: string) {
       Bucket: process.env.S3_BUCKET,
       Key: key,
       ContentType: contentType,
-      ServerSideEncryption:
-        process.env.S3_SSE === "AES256" ? "AES256" : undefined,
+    }),
+    { expiresIn: 900 },
+  );
+}
+
+export async function createDownloadUrl(key: string) {
+  if (!key) {
+    throw new Error("Storage key is required.");
+  }
+
+  const client = getClient();
+
+  return getSignedUrl(
+    client,
+    new GetObjectCommand({
+      Bucket: process.env.S3_BUCKET,
+      Key: key,
     }),
     { expiresIn: 900 },
   );
@@ -62,8 +88,6 @@ export async function putObject(
       Key: key,
       Body: body,
       ContentType: contentType,
-      ServerSideEncryption:
-        process.env.S3_SSE === "AES256" ? "AES256" : undefined,
     }),
   );
 }
