@@ -2,12 +2,19 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 function getClient() {
-  if (!process.env.AWS_REGION || !process.env.S3_BUCKET) {
-    throw new Error("S3 storage is not configured. Set AWS_REGION and S3_BUCKET.");
+  if (
+    !process.env.AWS_REGION ||
+    !process.env.S3_BUCKET ||
+    !process.env.S3_ENDPOINT
+  ) {
+    throw new Error(
+      "S3 storage is not configured. Set AWS_REGION, S3_BUCKET, and S3_ENDPOINT.",
+    );
   }
 
   return new S3Client({
     region: process.env.AWS_REGION,
+    endpoint: process.env.S3_ENDPOINT,
     credentials:
       process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
         ? {
