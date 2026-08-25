@@ -10,23 +10,8 @@ export async function GET(_: Request, { params }: { params: Promise<{ downloadId
   if (d.orderItem.order.paymentStatus !== "PAID") return NextResponse.json({ error: "Payment is not verified." }, { status: 403 });
   if (d.expiresAt < new Date()) return NextResponse.json({ error: "Download link expired." }, { status: 410 });
   if (d.downloadCount >= d.maxDownloads) return NextResponse.json({ error: "Download limit reached." }, { status: 429 });
-  if (!process.env.AWS_REGION || !process.env.S3_BUCKET) return NextResponse.json({ error: "S3 is not configured" }, { status: 500 });
-
-  const client = new S3Client({
-      region: process.env.AWS_REGION,
-      credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
-        ? {
-            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-            ...(process.env.AWS_SESSION_TOKEN ? { sessionToken: process.env.AWS_SESSION_TOKEN } : {}),
-          }
-        : undefined,
-    });
-  const url = await getSignedUrl(client, new GetObjectCommand({
-    Bucket: process.env.S3_BUCKET,
-    Key: d.orderItem.photo.originalStorageKey,
-    ResponseContentDisposition: `attachment; filename="${d.orderItem.photo.title.replace(/[^a-zA-Z0-9._-]/g, "_")}.jpg"`,
-  }), { expiresIn: 300 });
+  const { createDownloadUrl } = await import("@/lib/storage");
+  const url = await createDownloadUrl(d.orderItem.photo.originalStorageKey);
 
   await prisma.download.update({ where: { id: d.id }, data: { downloadCount: { increment: 1 } } });
   return NextResponse.redirect(url);

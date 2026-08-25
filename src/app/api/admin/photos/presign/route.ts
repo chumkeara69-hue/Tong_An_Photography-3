@@ -20,6 +20,9 @@ export async function POST(req: Request) {
     const [original, preview] = await Promise.all([createUploadUrl(originalKey, originalType), createUploadUrl(previewKey, previewType)]);
     return NextResponse.json({ original: { url: original, key: originalKey }, preview: { url: preview, key: previewKey } });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Upload setup failed." },
+      { status: 400 },
+    );
   }
 }
