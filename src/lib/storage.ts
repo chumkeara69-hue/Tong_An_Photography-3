@@ -20,20 +20,23 @@ function getStorageConfig() {
     throw new Error(`Unsupported STORAGE_PROVIDER "${provider}". This production build requires Backblaze B2.`);
   }
 
-  const region = required("AWS_REGION");
   const bucket = required("S3_BUCKET");
   const accessKeyId = required("AWS_ACCESS_KEY_ID");
   const secretAccessKey = required("AWS_SECRET_ACCESS_KEY");
 
-  // Backblaze B2 S3-compatible endpoint.
+  // Backblaze B2 S3-compatible endpoint. AWS_REGION is optional: when it is
+  // omitted on Vercel, derive the region from S3_ENDPOINT.
   // Example: https://s3.us-west-004.backblazeb2.com
   const endpoint =
     process.env.S3_ENDPOINT?.trim() ||
-    `https://s3.${region}.backblazeb2.com`;
+    `https://s3.${process.env.AWS_REGION?.trim() || "us-west-004"}.backblazeb2.com`;
 
-  if (!/^https:\/\/s3\.[a-z0-9-]+\.backblazeb2\.com$/i.test(endpoint)) {
+  const match = endpoint.match(/^https:\/\/s3\.([a-z0-9-]+)\.backblazeb2\.com$/i);
+  if (!match) {
     throw new Error("S3_ENDPOINT must be a valid Backblaze B2 S3 endpoint.");
   }
+
+  const region = process.env.AWS_REGION?.trim() || match[1];
 
   return { region, bucket, accessKeyId, secretAccessKey, endpoint };
 }
@@ -54,8 +57,8 @@ function getClient() {
 
 export function isStorageConfigured() {
   return Boolean(
-    process.env.STORAGE_PROVIDER &&
-      process.env.AWS_REGION &&
+    (process.env.STORAGE_PROVIDER || "b2") &&
+      (process.env.AWS_REGION || process.env.S3_ENDPOINT) &&
       process.env.AWS_ACCESS_KEY_ID &&
       process.env.AWS_SECRET_ACCESS_KEY &&
       process.env.S3_BUCKET,

@@ -19,7 +19,7 @@ In Backblaze B2:
    - Application Key ID → `AWS_ACCESS_KEY_ID`
    - Application Key → `AWS_SECRET_ACCESS_KEY`
    - Bucket name → `S3_BUCKET`
-   - B2 region → `AWS_REGION`
+   - B2 region → `AWS_REGION` (optional if `S3_ENDPOINT` is set)
 
 For `us-west-004`, the S3 endpoint is:
 

@@ -23,7 +23,7 @@ Required:
 - `ADMIN_EMAIL`
 - `ADMIN_PASSWORD`
 - `STORAGE_PROVIDER=b2`
-- `AWS_REGION`
+- `AWS_REGION` *(optional if `S3_ENDPOINT` is set; defaults to the region in the endpoint)*
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
 - `S3_BUCKET`
