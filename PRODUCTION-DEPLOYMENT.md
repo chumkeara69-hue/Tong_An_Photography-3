@@ -6,7 +6,7 @@ This package is prepared for production deployment with:
 
 - Prisma PostgreSQL schema and migrations
 - Supabase/PostgreSQL production environment template
-- AWS S3 private storage configuration
+- Backblaze B2 S3-compatible private storage configuration
 - S3 server-side encryption (`AES256`) enabled by default
 - Production migration command: `npm run db:deploy`
 - Production seed command: `npm run db:seed:prod`
@@ -35,9 +35,9 @@ npm run db:seed:prod
 
 `db:deploy` applies the migration already included in `prisma/migrations`.
 
-## 2. AWS S3 Storage
+## 2. Backblaze B2 S3-compatible Storage
 
-Create a private S3 bucket.
+Create a private B2 bucket.
 
 Recommended:
 - Region: `ap-southeast-1`
@@ -126,7 +126,7 @@ Test all of these before accepting real customers:
 - Download link generation
 - Original download
 - Expired/unauthorized download is rejected
-- S3 bucket remains private
+- B2 bucket remains private
 - No AWS or database secret appears in GitHub
 
 ## Current payment model

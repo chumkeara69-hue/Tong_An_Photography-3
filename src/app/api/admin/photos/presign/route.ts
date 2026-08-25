@@ -3,26 +3,41 @@ import crypto from "node:crypto";
 import { requireAdmin } from "@/lib/auth";
 import { createUploadUrl } from "@/lib/storage";
 
+const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
 export async function POST(req: Request) {
   try {
     await requireAdmin();
     const b = await req.json();
     const originalName = String(b.originalName || "");
     const previewName = String(b.previewName || "");
-    const originalType = String(b.originalType || "");
-    const previewType = String(b.previewType || "");
-    if (!originalName || !previewName || !originalType.startsWith("image/") || !previewType.startsWith("image/")) {
-      return NextResponse.json({ error: "Two valid image files are required." }, { status: 400 });
+    const originalType = String(b.originalType || "").toLowerCase();
+    const previewType = String(b.previewType || "").toLowerCase();
+    const originalSize = Number(b.originalSize || 0);
+    const previewSize = Number(b.previewSize || 0);
+
+    if (!originalName || !previewName || !ALLOWED_IMAGE_TYPES.has(originalType) || !ALLOWED_IMAGE_TYPES.has(previewType)) {
+      return NextResponse.json({ error: "Original and preview must be JPG, PNG or WebP images." }, { status: 400 });
     }
+    if (originalSize <= 0 || previewSize <= 0 || originalSize > MAX_IMAGE_BYTES || previewSize > MAX_IMAGE_BYTES) {
+      return NextResponse.json({ error: "Each image must be smaller than 25 MB." }, { status: 400 });
+    }
+
     const id = crypto.randomUUID();
-    const originalKey = `originals/${id}-${originalName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-    const previewKey = `previews/${id}-${previewName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-    const [original, preview] = await Promise.all([createUploadUrl(originalKey, originalType), createUploadUrl(previewKey, previewType)]);
+    const safeOriginal = originalName.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120);
+    const safePreview = previewName.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120);
+    const originalKey = `originals/${id}-${safeOriginal}`;
+    const previewKey = `previews/${id}-${safePreview}`;
+    const [original, preview] = await Promise.all([
+      createUploadUrl(originalKey, originalType),
+      createUploadUrl(previewKey, previewType),
+    ]);
+
     return NextResponse.json({ original: { url: original, key: originalKey }, preview: { url: preview, key: previewKey } });
   } catch (e) {
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Upload setup failed." },
-      { status: 400 },
-    );
+    const message = e instanceof Error ? e.message : "Upload setup failed.";
+    const status = message === "UNAUTHORIZED" ? 401 : 400;
+    return NextResponse.json({ error: message }, { status });
   }
 }

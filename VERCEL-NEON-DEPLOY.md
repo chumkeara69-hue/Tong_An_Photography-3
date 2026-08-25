@@ -1,58 +1,73 @@
-# Tong An Photography — Vercel + Neon deployment
+# Vercel + PostgreSQL + Backblaze B2 deployment
 
-This package has been cleaned for deployment and includes:
-- fixed `src/lib/storage.ts` (removed literal `\\n` source corruption)
-- fixed `/api/photos` to include `category`
-- fixed `/cart` to render `useSearchParams()` inside `Suspense`
-- Prisma migration already included at `prisma/migrations/00000000000000_init`
-- Vercel build now runs `prisma migrate deploy` automatically before Next.js build
-- Neon environment-variable template in `.env.vercel.neon`
+This is the production path for the current project.
 
-## Important: use a fresh Neon database/branch
+## Vercel variables
 
-The earlier manual SQL tables may not exactly match the Prisma enums/schema.
-For the cleanest deployment, use a fresh Neon database/branch and let the included
-Prisma migration create everything. Do not manually create the tables in SQL Editor.
+Set these in Vercel → Project → Settings → Environment Variables:
 
-## Vercel Environment Variables
-
-Add these in Vercel for Production (and Preview only if you intentionally share the same DB):
-
-- `DATABASE_URL` = Neon pooled connection string
-- `DIRECT_URL` = Neon direct/unpooled connection string
-- `APP_URL` = your Vercel URL
-- `ADMIN_EMAIL` = your admin email
-- `ADMIN_PASSWORD` = a long unique password
-- `STORAGE_PROVIDER` = `s3`
-- `AWS_REGION`
+- `DATABASE_URL`
+- `DIRECT_URL` (recommended for Prisma migrations)
+- `APP_URL`
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD`
+- `STORAGE_PROVIDER=b2`
+- `AWS_REGION=us-west-004`
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
 - `S3_BUCKET`
-- `S3_PUBLIC_BASE_URL` = leave empty unless you intentionally use a public base URL
-- `S3_SSE` = `AES256`
+- `S3_ENDPOINT=https://s3.us-west-004.backblazeb2.com`
 
-Never commit real secrets to GitHub.
+Do not add real secrets to GitHub.
 
-## Vercel
+## Build
 
-Build command:
-`npm run build`
+Vercel build command:
 
-The build command automatically runs:
-`prisma migrate deploy && prisma generate && next build`
+```bash
+npm run build
+```
 
-This means the committed migration creates the database tables automatically during deployment.
-The migration must be used against the intended Neon database.
+The package runs:
 
-## After the first successful deployment
+```text
+prisma migrate deploy
+prisma generate
+next build
+```
 
-Open the Vercel URL and test:
-- homepage
-- `/photos`
-- `/cart`
-- login/admin
-- checkout/order flow
-- payment proof upload
-- download flow
+The Prisma schema and initial migration are already included.
 
-S3 credentials are still required for production uploads/downloads.
+## Database
+
+For a new production database, let Prisma create the schema from the included migration. Do not manually create duplicate tables.
+
+`DATABASE_URL` is used by the Vercel runtime. `DIRECT_URL` is preferred by `prisma.config.ts` for migration commands.
+
+## Backblaze B2
+
+The bucket must be private.
+
+- `previews/` → private, served with signed URLs
+- `originals/` → private, only released after payment approval
+- `payment-proofs/` → private, admin-only signed access
+
+Configure the bucket CORS with `backblaze-b2-cors.json`.
+
+## Admin authentication
+
+The admin uses a database-backed session cookie, not NextAuth.
+
+That means `NEXTAUTH_SECRET` is **not required**.
+
+If you see `UNAUTHORIZED`, verify in this order:
+
+1. `ADMIN_EMAIL` and `ADMIN_PASSWORD` are set in Vercel.
+2. `npm run db:seed:prod` was run against the same production database.
+3. The seeded email is lowercase and matches the login email.
+4. The browser received the `tong_an_session` cookie after login.
+5. The deployment uses HTTPS.
+
+## Important
+
+The Backblaze credentials supplied during setup must never be committed to GitHub. If a real Application Key has been pasted into chat, rotate/revoke it in Backblaze and create a fresh key before production.

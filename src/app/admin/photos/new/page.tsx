@@ -22,7 +22,7 @@ export default function NewPhoto() {
       const p = await fetch("/api/admin/photos/presign", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ originalName: original.name, originalType: original.type, previewName: preview.name, previewType: preview.type }),
+        body: JSON.stringify({ originalName: original.name, originalType: original.type, originalSize: original.size, previewName: preview.name, previewType: preview.type, previewSize: preview.size }),
       });
       const urls = await p.json();
       if (!p.ok) throw new Error(urls.error || "Presign failed");

@@ -9,7 +9,7 @@ A Next.js photo-selling website with manual KHQR/ABA payment verification.
 - Add-to-cart and checkout
 - Customer order page with your real QR image at `public/payment-qr.jpg`
 - Customer uploads a payment receipt (JPG, PNG, WebP, or PDF; max 10 MB)
-- Receipt is stored in private S3 storage
+- Receipt is stored in private Backblaze B2 storage
 - Admin login and order dashboard
 - Admin can open the private receipt with a short-lived signed URL
 - Admin clicks **Approve Payment** only after checking the receipt
@@ -17,7 +17,7 @@ A Next.js photo-selling website with manual KHQR/ABA payment verification.
 - Only PAID orders can access original-photo downloads
 - Original download links expire after 7 days and allow up to 5 downloads
 - Original photos remain private in S3
-- Preview images can be served through `S3_PUBLIC_BASE_URL`
+- Preview images can be served through ``
 
 ## Payment model
 
@@ -45,8 +45,8 @@ You need:
 
 1. Node.js 20+
 2. PostgreSQL
-3. An S3-compatible bucket
-4. AWS credentials with access to that bucket
+3. An Backblaze B2 bucket
+4. Backblaze B2 Application Key credentials with access to that bucket
 5. S3 CORS allowing browser `PUT` from your website origin
 6. A private bucket for originals and payment proofs
 7. A public/CDN path only for preview images
@@ -139,3 +139,13 @@ The existing Prisma migration is ready to create the complete database schema. N
 - Improved About and Contact pages.
 - Better mobile layouts, focus states, accessibility, and empty states.
 - SEO metadata, robots.txt, and sitemap.xml.
+
+## Production storage security
+
+This build uses a **private Backblaze B2 bucket** through the S3-compatible API. Preview images and original downloads are delivered with short-lived signed URLs; the bucket itself should not be public.
+
+- Rotate any B2 Application Key that has ever been pasted into chat, source code, `.env` files, screenshots, or Git history.
+- Put the replacement credentials only in Vercel Environment Variables.
+- Do not add `NEXTAUTH_SECRET`, `S3_PUBLIC_BASE_URL`, or `S3_SSE`; this build does not use them.
+- Run `npm run check:prod-env` before deploying when production variables are available.
+- Run `npm run typecheck` before pushing to GitHub.

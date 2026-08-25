@@ -5,80 +5,108 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-function getClient() {
-  const region = process.env.AWS_REGION;
-  const bucket = process.env.S3_BUCKET;
-  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+const SIGNED_URL_TTL_SECONDS = 10 * 60;
+const MAX_SIGNED_URL_TTL_SECONDS = 15 * 60;
 
-  if (!region || !bucket || !accessKeyId || !secretAccessKey) {
-    throw new Error(
-      "Backblaze B2 is not configured. Set AWS_REGION, S3_BUCKET, AWS_ACCESS_KEY_ID, and AWS_SECRET_ACCESS_KEY.",
-    );
+function required(name: string) {
+  const value = process.env[name]?.trim();
+  if (!value) throw new Error(`Missing required environment variable: ${name}`);
+  return value;
+}
+
+function getStorageConfig() {
+  const provider = (process.env.STORAGE_PROVIDER || "b2").trim().toLowerCase();
+  if (provider !== "b2") {
+    throw new Error(`Unsupported STORAGE_PROVIDER "${provider}". This production build requires Backblaze B2.`);
   }
 
-  // Backblaze B2 provides an S3-compatible endpoint.
+  const region = required("AWS_REGION");
+  const bucket = required("S3_BUCKET");
+  const accessKeyId = required("AWS_ACCESS_KEY_ID");
+  const secretAccessKey = required("AWS_SECRET_ACCESS_KEY");
+
+  // Backblaze B2 S3-compatible endpoint.
   // Example: https://s3.us-west-004.backblazeb2.com
   const endpoint =
-    process.env.S3_ENDPOINT || `https://s3.${region}.backblazeb2.com`;
+    process.env.S3_ENDPOINT?.trim() ||
+    `https://s3.${region}.backblazeb2.com`;
+
+  if (!/^https:\/\/s3\.[a-z0-9-]+\.backblazeb2\.com$/i.test(endpoint)) {
+    throw new Error("S3_ENDPOINT must be a valid Backblaze B2 S3 endpoint.");
+  }
+
+  return { region, bucket, accessKeyId, secretAccessKey, endpoint };
+}
+
+function getClient() {
+  const config = getStorageConfig();
 
   return new S3Client({
-    region,
-    endpoint,
+    region: config.region,
+    endpoint: config.endpoint,
     forcePathStyle: false,
     credentials: {
-      accessKeyId,
-      secretAccessKey,
+      accessKeyId: config.accessKeyId,
+      secretAccessKey: config.secretAccessKey,
     },
   });
 }
 
-function assertStorageProvider() {
-  const provider = (process.env.STORAGE_PROVIDER || "").toLowerCase();
-  if (provider !== "b2" && provider !== "s3") {
-    throw new Error(
-      'Storage is not configured. Set STORAGE_PROVIDER to "b2" for Backblaze B2.',
-    );
-  }
+export function isStorageConfigured() {
+  return Boolean(
+    process.env.STORAGE_PROVIDER &&
+      process.env.AWS_REGION &&
+      process.env.AWS_ACCESS_KEY_ID &&
+      process.env.AWS_SECRET_ACCESS_KEY &&
+      process.env.S3_BUCKET,
+  );
 }
 
 export async function createUploadUrl(key: string, contentType: string) {
-  assertStorageProvider();
-
   if (!key) throw new Error("Storage key is required.");
   if (!contentType) throw new Error("Content type is required.");
 
-  const client = getClient();
+  const { bucket } = getStorageConfig();
 
   return getSignedUrl(
-    client,
+    getClient(),
     new PutObjectCommand({
-      Bucket: process.env.S3_BUCKET!,
+      Bucket: bucket,
       Key: key,
       ContentType: contentType,
     }),
-    { expiresIn: 900 },
+    { expiresIn: SIGNED_URL_TTL_SECONDS },
   );
 }
 
-export async function createDownloadUrl(key: string) {
+export async function createDownloadUrl(
+  key: string,
+  options: { attachment?: boolean; filename?: string; expiresIn?: number } = {},
+) {
   if (!key) throw new Error("Storage key is required.");
 
-  // Existing local/public assets continue to work.
+  // Existing local/public assets continue to work during migration.
   if (key.startsWith("/") || /^https?:\/\//i.test(key)) return key;
 
-  assertStorageProvider();
+  const { bucket } = getStorageConfig();
+  const command = new GetObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    ...(options.attachment
+      ? {
+          ResponseContentDisposition: `attachment; filename="${(
+            options.filename || key.split("/").pop() || "download"
+          ).replace(/["\\\r\n]/g, "_")}"`,
+        }
+      : {}),
+  });
 
-  const client = getClient();
-
-  return getSignedUrl(
-    client,
-    new GetObjectCommand({
-      Bucket: process.env.S3_BUCKET!,
-      Key: key,
-    }),
-    { expiresIn: 900 },
+  const expiresIn = Math.min(
+    Math.max(60, Number(options.expiresIn || SIGNED_URL_TTL_SECONDS)),
+    MAX_SIGNED_URL_TTL_SECONDS,
   );
+
+  return getSignedUrl(getClient(), command, { expiresIn });
 }
 
 export async function putObject(
@@ -86,13 +114,12 @@ export async function putObject(
   body: Buffer,
   contentType: string,
 ) {
-  assertStorageProvider();
+  if (!key) throw new Error("Storage key is required.");
+  const { bucket } = getStorageConfig();
 
-  const client = getClient();
-
-  await client.send(
+  await getClient().send(
     new PutObjectCommand({
-      Bucket: process.env.S3_BUCKET!,
+      Bucket: bucket,
       Key: key,
       Body: body,
       ContentType: contentType,
