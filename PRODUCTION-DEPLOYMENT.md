@@ -140,3 +140,9 @@ Automatic bank/payment verification is not included unless the relevant official
 ## Security note
 
 Never send your Supabase database password, AWS secret key, admin password, or authentication secret in chat or commit them to GitHub.
+
+## Upload reliability notes
+
+The admin photo uploader now uses short-lived B2 S3-compatible presigned PUT URLs, browser-side retry, unique object keys, and a server-side `HeadObject` verification before the Prisma photo record is created.
+
+For browser uploads, configure the B2 bucket CORS rule from `backblaze-b2-cors.json`. The included rule allows localhost and Vercel deployments (`https://*.vercel.app`). If the site uses a custom domain, add that exact origin to the bucket CORS configuration as well. B2 supports wildcard origins and requires CORS to permit the S3 `Put Object` operation for browser uploads. 
