@@ -27,11 +27,12 @@ function getStorageConfig() {
   // Backblaze B2 S3-compatible endpoint. AWS_REGION is optional: when it is
   // omitted on Vercel, derive the region from S3_ENDPOINT.
   // Example: https://s3.us-west-004.backblazeb2.com
-  const endpoint =
+  const endpoint = (
     process.env.S3_ENDPOINT?.trim() ||
-    `https://s3.${process.env.AWS_REGION?.trim() || "us-west-004"}.backblazeb2.com`;
+    `https://s3.${process.env.AWS_REGION?.trim() || "us-west-004"}.backblazeb2.com`
+  ).replace(/\/+$/, "");
 
-  const match = endpoint.match(/^https:\/\/s3\.([a-z0-9-]+)\.backblazeb2\.com$/i);
+  const match = endpoint.match(/^https:\/\/(?:s3|s3\.[a-z0-9-]+)\.([a-z0-9-]+)\.backblazeb2\.com$/i) || endpoint.match(/^https:\/\/s3\.([a-z0-9-]+)\.backblazeb2\.com$/i);
   if (!match) {
     throw new Error("S3_ENDPOINT must be a valid Backblaze B2 S3 endpoint.");
   }
@@ -48,6 +49,7 @@ function getClient() {
     region: config.region,
     endpoint: config.endpoint,
     forcePathStyle: false,
+    requestChecksumCalculation: "WHEN_REQUIRED",
     credentials: {
       accessKeyId: config.accessKeyId,
       secretAccessKey: config.secretAccessKey,
