@@ -22,7 +22,6 @@ export async function POST(req: Request) {
     await requireAdmin();
 
     const b = await req.json();
-
     const originalName = String(b.originalName || "");
     const previewName = String(b.previewName || "");
     const originalType = String(b.originalType || "").toLowerCase();
@@ -57,7 +56,6 @@ export async function POST(req: Request) {
     }
 
     const id = crypto.randomUUID();
-
     const safeOriginal = safeFilename(originalName, "original.jpg");
     const safePreview = safeFilename(previewName, "preview.jpg");
 
