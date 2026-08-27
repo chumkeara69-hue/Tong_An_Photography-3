@@ -1,20 +1,9 @@
 [
   {
-    "AllowedOrigins": [
-      "http://localhost:3000",
-      "https"
-    ],
-    "AllowedMethods": [
-      "PUT",
-      "GET",
-      "HEAD"
-    ],
-    "AllowedHeaders": [
-      "*"
-    ],
-    "ExposeHeaders": [
-      "ETag"
-    ],
+    "AllowedOrigins": ["*"],
+    "AllowedMethods": ["PUT", "GET", "HEAD"],
+    "AllowedHeaders": ["*"],
+    "ExposeHeaders": ["ETag", "Content-Length", "Content-Type"],
     "MaxAgeSeconds": 86400
   }
 ]

@@ -51,3 +51,10 @@ Do not commit real values to GitHub.
 - Approving an order creates download access.
 - Download redirects to a short-lived signed B2 URL.
 - Expired/over-limit downloads are rejected.
+
+
+## Backblaze B2 browser upload
+
+Before testing `/admin/photos/new`, apply `backblaze-b2-cors.json` to the **same B2 bucket** used by `S3_BUCKET`. The rule permits S3 `PUT`, `GET`, and `HEAD` from HTTPS origins and localhost development. B2 evaluates CORS rules on the bucket for browser cross-origin requests.
+
+**Security:** never commit `AWS_SECRET_ACCESS_KEY`, an admin password, or other credentials to Git. Add them only in Vercel Environment Variables.

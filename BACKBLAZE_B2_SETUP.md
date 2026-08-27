@@ -136,3 +136,9 @@ Test:
 - Download limit
 - Bucket remains private
 
+
+## Browser upload CORS
+
+This project uploads directly from the admin browser to B2 using a short-lived S3 presigned PUT URL. The included `backblaze-b2-cors.json` intentionally allows `*` origins because the presigned URL itself authorizes the upload; no B2 secret is sent to the browser. If you want to restrict origins, replace `*` with your exact production Vercel domain(s) and `http://localhost:3000` for local development.
+
+The browser must send the same `Content-Type` that was used when generating the presigned URL.
