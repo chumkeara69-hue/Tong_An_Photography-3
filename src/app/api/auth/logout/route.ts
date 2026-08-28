@@ -1,3 +1,7 @@
 import { NextResponse } from "next/server";
 import { destroySession } from "@/lib/auth";
-export async function GET(){await destroySession();return NextResponse.redirect(new URL("/admin/login", "https://tong-an-photography-3-nntn.vercel.app"));}
+
+export async function GET(req: Request) {
+  await destroySession();
+  return NextResponse.redirect(new URL("/admin/login", req.url));
+}

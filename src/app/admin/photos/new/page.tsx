@@ -64,6 +64,7 @@ export default function NewPhoto() {
 
       const p = await fetch("/api/admin/photos/presign", {
         method: "POST",
+        credentials: "same-origin",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           originalName: original.name,
@@ -84,6 +85,7 @@ export default function NewPhoto() {
 
       const c = await fetch("/api/admin/photos/complete", {
         method: "POST",
+        credentials: "same-origin",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           ...data,

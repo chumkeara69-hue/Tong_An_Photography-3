@@ -13,14 +13,12 @@ function safeFilename(name: string, fallback: string) {
     .replace(/\.{2,}/g, ".")
     .replace(/^\.+/, "")
     .slice(-120);
-
   return cleaned || fallback;
 }
 
 export async function POST(req: Request) {
   try {
     await requireAdmin();
-
     const b = await req.json();
     const originalName = String(b.originalName || "");
     const previewName = String(b.previewName || "");
@@ -29,36 +27,20 @@ export async function POST(req: Request) {
     const originalSize = Number(b.originalSize || 0);
     const previewSize = Number(b.previewSize || 0);
 
-    if (
-      !originalName ||
-      !previewName ||
-      !ALLOWED_IMAGE_TYPES.has(originalType) ||
-      !ALLOWED_IMAGE_TYPES.has(previewType)
-    ) {
-      return NextResponse.json(
-        { error: "Original and preview must be JPG, PNG or WebP images." },
-        { status: 400 },
-      );
+    if (!originalName || !previewName || !ALLOWED_IMAGE_TYPES.has(originalType) || !ALLOWED_IMAGE_TYPES.has(previewType)) {
+      return NextResponse.json({ error: "Original and preview must be JPG, PNG or WebP images." }, { status: 400 });
     }
-
     if (
-      !Number.isInteger(originalSize) ||
-      !Number.isInteger(previewSize) ||
-      originalSize <= 0 ||
-      previewSize <= 0 ||
-      originalSize > MAX_IMAGE_BYTES ||
-      previewSize > MAX_IMAGE_BYTES
+      !Number.isInteger(originalSize) || !Number.isInteger(previewSize) ||
+      originalSize <= 0 || previewSize <= 0 ||
+      originalSize > MAX_IMAGE_BYTES || previewSize > MAX_IMAGE_BYTES
     ) {
-      return NextResponse.json(
-        { error: "Each image must be smaller than 25 MB." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Each image must be smaller than 25 MB." }, { status: 400 });
     }
 
     const id = crypto.randomUUID();
     const safeOriginal = safeFilename(originalName, "original.jpg");
     const safePreview = safeFilename(previewName, "preview.jpg");
-
     const originalKey = `originals/${id}-${safeOriginal}`;
     const previewKey = `previews/${id}-${safePreview}`;
 
@@ -68,32 +50,12 @@ export async function POST(req: Request) {
     ]);
 
     return NextResponse.json({
-      original: {
-        url: original,
-        key: originalKey,
-        size: originalSize,
-        contentType: originalType,
-      },
-      preview: {
-        url: preview,
-        key: previewKey,
-        size: previewSize,
-        contentType: previewType,
-      },
+      original: { url: original, key: originalKey, size: originalSize, contentType: originalType },
+      preview: { url: preview, key: previewKey, size: previewSize, contentType: previewType },
     });
   } catch (e) {
-    console.error("Upload setup error:", e);
-
-    if (e instanceof Error && e.message === "UNAUTHORIZED") {
-      return NextResponse.json(
-        { error: "UNAUTHORIZED" },
-        { status: 401 },
-      );
-    }
-
-    return NextResponse.json(
-      { error: "Upload setup failed." },
-      { status: 500 },
-    );
+    const message = e instanceof Error ? e.message : "Upload setup failed.";
+    const status = message === "UNAUTHORIZED" ? 401 : 400;
+    return NextResponse.json({ error: message }, { status });
   }
 }
