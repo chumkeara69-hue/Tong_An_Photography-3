@@ -1,4 +1,3 @@
-```ts
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -17,11 +16,5 @@ export async function GET() {
       : {
           authenticated: false,
         },
-    {
-      headers: {
-        "Cache-Control": "no-store",
-      },
-    },
   );
 }
-```
