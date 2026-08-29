@@ -26,7 +26,10 @@ export async function POST(req: Request) {
     }
 
     await createSession(user.id);
-    return NextResponse.json({ ok: true });
+    return NextResponse.json(
+      { ok: true, role: user.role },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }

@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 
-const COOKIE = "tong_an_session";
+const COOKIE = "tong_an_session_v2";
 const TTL_DAYS = 7;
 
 function hashToken(token: string) {
@@ -49,6 +49,7 @@ export async function getCurrentUser() {
   });
 
   if (!session) return null;
+  if (!session.user || session.user.role !== "ADMIN" && session.user.role !== "CUSTOMER") return null;
   if (session.expiresAt <= new Date()) {
     await prisma.session.delete({ where: { id: session.id } }).catch(() => {});
     return null;

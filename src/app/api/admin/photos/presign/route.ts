@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       original: { url: original, key: originalKey, size: originalSize, contentType: originalType },
       preview: { url: preview, key: previewKey, size: previewSize, contentType: previewType },
-    });
+    }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Upload setup failed.";
     const status = message === "UNAUTHORIZED" ? 401 : 400;

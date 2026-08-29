@@ -18,7 +18,12 @@ async function uploadWithRetry(url: string, file: File, attempts = 4) {
         signal: controller.signal,
       });
       if (response.ok) return;
-      lastError = `Upload failed (HTTP ${response.status}).`;
+      let detail = "";
+      try {
+        const text = await response.text();
+        detail = text.replace(/<[^>]+>/g, " ").replace(/\\s+/g, " ").trim().slice(0, 240);
+      } catch {}
+      lastError = `Upload failed (HTTP ${response.status})${detail ? `: ${detail}` : "."}`;
       // Retry transient server/rate-limit errors; fail fast on client errors.
       if (response.status < 500 && response.status !== 429) break;
     } catch (error) {
@@ -75,8 +80,11 @@ export default function NewPhoto() {
           previewSize: preview.size,
         }),
       });
-      const urls = await p.json();
-      if (!p.ok) throw new Error(urls.error || "Could not prepare the upload.");
+      const urls = await p.json().catch(() => ({}));
+      if (p.status === 401) {
+        throw new Error("UNAUTHORIZED: Your admin session has expired. Please log in again and retry.");
+      }
+      if (!p.ok) throw new Error(urls.error || `Could not prepare the upload (HTTP ${p.status}).`);
 
       await Promise.all([
         uploadWithRetry(urls.original.url, original),
@@ -98,8 +106,11 @@ export default function NewPhoto() {
           previewContentType: preview.type,
         }),
       });
-      const result = await c.json();
-      if (!c.ok) throw new Error(result.error || "Could not save photo.");
+      const result = await c.json().catch(() => ({}));
+      if (c.status === 401) {
+        throw new Error("UNAUTHORIZED: Your admin session has expired. Please log in again and retry.");
+      }
+      if (!c.ok) throw new Error(result.error || `Could not save photo (HTTP ${c.status}).`);
       r.push("/admin");
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Upload failed.");
