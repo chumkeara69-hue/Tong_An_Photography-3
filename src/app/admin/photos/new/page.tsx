@@ -13,6 +13,7 @@ async function uploadWithRetry(url: string, file: File, attempts = 4) {
     try {
       const response = await fetch(url, {
         method: "PUT",
+        mode: "cors",
         headers: { "content-type": file.type },
         body: file,
         signal: controller.signal,
@@ -29,7 +30,9 @@ async function uploadWithRetry(url: string, file: File, attempts = 4) {
     } catch (error) {
       lastError = error instanceof DOMException && error.name === "AbortError"
         ? "Upload timed out. Please try again."
-        : error instanceof Error ? error.message : "Network error during upload.";
+        : error instanceof TypeError
+          ? "Browser could not reach Backblaze B2 (likely CORS or S3_ENDPOINT mismatch). Check B2 CORS, S3_BUCKET and S3_ENDPOINT."
+          : error instanceof Error ? error.message : "Network error during upload.";
     } finally {
       window.clearTimeout(timeout);
     }
