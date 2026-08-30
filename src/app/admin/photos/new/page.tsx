@@ -13,7 +13,6 @@ async function uploadWithRetry(url: string, file: File, attempts = 4) {
     try {
       const response = await fetch(url, {
         method: "PUT",
-        mode: "cors",
         headers: { "content-type": file.type },
         body: file,
         signal: controller.signal,
@@ -30,9 +29,7 @@ async function uploadWithRetry(url: string, file: File, attempts = 4) {
     } catch (error) {
       lastError = error instanceof DOMException && error.name === "AbortError"
         ? "Upload timed out. Please try again."
-        : error instanceof TypeError
-          ? "Browser could not reach Backblaze B2 (likely CORS or S3_ENDPOINT mismatch). Check B2 CORS, S3_BUCKET and S3_ENDPOINT."
-          : error instanceof Error ? error.message : "Network error during upload.";
+        : error instanceof Error ? error.message : "Network error during upload.";
     } finally {
       window.clearTimeout(timeout);
     }
@@ -85,7 +82,7 @@ export default function NewPhoto() {
       });
       const urls = await p.json().catch(() => ({}));
       if (p.status === 401) {
-        throw new Error("UNAUTHORIZED: Your admin session has expired. Please log in again and retry.");
+        r.push("/login"); return;
       }
       if (!p.ok) throw new Error(urls.error || `Could not prepare the upload (HTTP ${p.status}).`);
 
@@ -111,7 +108,7 @@ export default function NewPhoto() {
       });
       const result = await c.json().catch(() => ({}));
       if (c.status === 401) {
-        throw new Error("UNAUTHORIZED: Your admin session has expired. Please log in again and retry.");
+        r.push("/login"); return;
       }
       if (!c.ok) throw new Error(result.error || `Could not save photo (HTTP ${c.status}).`);
       r.push("/admin");
