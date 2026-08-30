@@ -12,6 +12,7 @@ async function uploadWithRetry(url: string, file: File, attempts = 4) {
     const timeout = window.setTimeout(() => controller.abort(), 5 * 60 * 1000);
     try {
       const response = await fetch(url, {
+        mode: "cors",
         method: "PUT",
         headers: { "content-type": file.type },
         body: file,
@@ -82,7 +83,7 @@ export default function NewPhoto() {
       });
       const urls = await p.json().catch(() => ({}));
       if (p.status === 401) {
-        r.push("/login"); return;
+        window.location.href="/login"; return;
       }
       if (!p.ok) throw new Error(urls.error || `Could not prepare the upload (HTTP ${p.status}).`);
 
@@ -108,7 +109,7 @@ export default function NewPhoto() {
       });
       const result = await c.json().catch(() => ({}));
       if (c.status === 401) {
-        r.push("/login"); return;
+        window.location.href="/login"; return;
       }
       if (!c.ok) throw new Error(result.error || `Could not save photo (HTTP ${c.status}).`);
       r.push("/admin");

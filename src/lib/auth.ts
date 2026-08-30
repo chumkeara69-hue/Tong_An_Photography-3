@@ -55,15 +55,14 @@ export async function getCurrentUser() {
     return null;
   }
 
-  // Sliding session: refresh expiry on every authenticated request.
-  const expiresAt = new Date(Date.now() + TTL_DAYS * 86400000);
-  await prisma.session.update({ where: { id: session.id }, data: { expiresAt } }).catch(() => {});
+  const nextExpiry = new Date(Date.now() + TTL_DAYS * 86400000);
+  await prisma.session.update({ where: { id: session.id }, data: { expiresAt: nextExpiry } }).catch(() => {});
   store.set(COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    expires: expiresAt,
+    expires: nextExpiry,
   });
 
   return session.user;
