@@ -83,7 +83,7 @@ export default function NewPhoto() {
       });
       const urls = await p.json().catch(() => ({}));
       if (p.status === 401) {
-        window.location.href="/login"; return;
+       window.location.href="/admin/login"; return;
       }
       if (!p.ok) throw new Error(urls.error || `Could not prepare the upload (HTTP ${p.status}).`);
 
