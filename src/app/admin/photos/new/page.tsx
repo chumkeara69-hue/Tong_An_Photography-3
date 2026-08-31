@@ -92,7 +92,7 @@ export default function NewPhoto() {
         uploadWithRetry(urls.preview.url, preview),
       ]);
 
-      const c = await fetch("/api/admin/photos/complete", {
+      const c = await fetch("/api/admin/photos/completed", {
         method: "POST",
         credentials: "same-origin",
         headers: { "content-type": "application/json" },
