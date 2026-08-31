@@ -57,14 +57,9 @@ export async function getCurrentUser() {
 
   const nextExpiry = new Date(Date.now() + TTL_DAYS * 86400000);
   await prisma.session.update({ where: { id: session.id }, data: { expiresAt: nextExpiry } }).catch(() => {});
-  store.set(COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    expires: nextExpiry,
-  });
 
+  // Do not modify cookies here. This function is used by Server Components
+  // where cookies().set() is not allowed in Next.js.
   return session.user;
 }
 
