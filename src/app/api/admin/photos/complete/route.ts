@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import crypto from "node:crypto";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
@@ -8,8 +9,32 @@ const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 
 export async function POST(req: Request) {
   try {
-    await requireAdmin();
     const b = await req.json();
+    let authenticated = false;
+    try { await requireAdmin(); authenticated = true; } catch {}
+
+    // If the admin session is lost during a long B2 upload, accept the
+    // short-lived completion token issued by /presign instead of redirecting
+    // the user back to login.
+    if (!authenticated) {
+      const token = String(b.completionToken || "");
+      const [payload, signature] = token.split(".");
+      const secret = process.env.SESSION_SECRET || process.env.NEXTAUTH_SECRET || process.env.DATABASE_URL || "tong-an-upload";
+      const expected = payload ? crypto.createHmac("sha256", secret).update(payload).digest("base64url") : "";
+      if (!payload || !signature || signature.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
+        return NextResponse.json({ error: "Your admin session expired. Please log in again." }, { status: 401 });
+      }
+      let tokenData: any;
+      try { tokenData = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")); } catch {
+        return NextResponse.json({ error: "Invalid upload completion token." }, { status: 401 });
+      }
+      if (!tokenData.exp || Date.now() > tokenData.exp) {
+        return NextResponse.json({ error: "Upload completion token expired. Please upload again." }, { status: 401 });
+      }
+      if (b.originalStorageKey !== tokenData.originalKey || b.previewStorageKey !== tokenData.previewKey) {
+        return NextResponse.json({ error: "Upload token does not match the uploaded files." }, { status: 400 });
+      }
+    }
     const title = String(b.title || "").trim();
     const categoryName = String(b.category || "").trim();
     const description = String(b.description || "").trim() || null;

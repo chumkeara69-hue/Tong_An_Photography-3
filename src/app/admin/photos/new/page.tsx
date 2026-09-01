@@ -105,12 +105,10 @@ export default function NewPhoto() {
           previewSize: preview.size,
           originalContentType: original.type,
           previewContentType: preview.type,
+          completionToken: urls.completionToken,
         }),
       });
       const result = await c.json().catch(() => ({}));
-      if (c.status === 401) {
-        window.location.href="/admin/login"; return;
-      }
       if (!c.ok) throw new Error(result.error || `Could not save photo (HTTP ${c.status}).`);
       r.push("/admin");
     } catch (e) {

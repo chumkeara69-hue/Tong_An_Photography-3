@@ -49,9 +49,23 @@ export async function POST(req: Request) {
       createUploadUrl(previewKey, previewType),
     ]);
 
+    // The B2 PUT can take long enough that a second authenticated request may
+    // occasionally lose the browser session. Give the upload a short-lived
+    // completion token so the final save can be completed without bouncing
+    // the user back to the login page. The token is server-verifiable and
+    // contains no credentials.
+    const secret = process.env.SESSION_SECRET || process.env.NEXTAUTH_SECRET || process.env.DATABASE_URL || "tong-an-upload";
+    const payload = Buffer.from(JSON.stringify({
+      originalKey, previewKey, originalSize, previewSize, originalType, previewType,
+      exp: Date.now() + 15 * 60 * 1000,
+    })).toString("base64url");
+    const sig = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
+    const completionToken = `${payload}.${sig}`;
+
     return NextResponse.json({
       original: { url: original, key: originalKey, size: originalSize, contentType: originalType },
       preview: { url: preview, key: previewKey, size: previewSize, contentType: previewType },
+      completionToken,
     }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Upload setup failed.";
