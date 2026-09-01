@@ -83,7 +83,7 @@ export default function NewPhoto() {
       });
       const urls = await p.json().catch(() => ({}));
       if (p.status === 401) {
-        window.location.href="/login"; return;
+        window.location.href="/admin/login"; return;
       }
       if (!p.ok) throw new Error(urls.error || `Could not prepare the upload (HTTP ${p.status}).`);
 
@@ -109,7 +109,7 @@ export default function NewPhoto() {
       });
       const result = await c.json().catch(() => ({}));
       if (c.status === 401) {
-        window.location.href="/login"; return;
+        window.location.href="/admin/login"; return;
       }
       if (!c.ok) throw new Error(result.error || `Could not save photo (HTTP ${c.status}).`);
       r.push("/admin");
