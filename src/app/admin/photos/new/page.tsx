@@ -6,36 +6,29 @@ const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 async function uploadWithRetry(url: string, file: File, attempts = 4) {
-  let lastError = "Upload failed.";
+  let lastError = "Could not upload the image. Please try again.";
   for (let attempt = 1; attempt <= attempts; attempt++) {
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 5 * 60 * 1000);
     try {
-      const response = await fetch(url, {
-        mode: "cors",
-        method: "PUT",
-        headers: { "content-type": file.type },
-        body: file,
-        signal: controller.signal,
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", url, true);
+        xhr.timeout = 5 * 60 * 1000;
+        xhr.setRequestHeader("Content-Type", file.type);
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) return resolve();
+          const detail = (xhr.responseText || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 180);
+          reject(new Error(`Upload failed (HTTP ${xhr.status})${detail ? `: ${detail}` : "."}`));
+        };
+        xhr.onerror = () => reject(new Error("Upload connection failed. Please check the Backblaze B2 CORS setting and try again."));
+        xhr.ontimeout = () => reject(new Error("Upload timed out. Please try again."));
+        xhr.onabort = () => reject(new Error("Upload was cancelled."));
+        xhr.send(file);
       });
-      if (response.ok) return;
-      let detail = "";
-      try {
-        const text = await response.text();
-        detail = text.replace(/<[^>]+>/g, " ").replace(/\\s+/g, " ").trim().slice(0, 240);
-      } catch {}
-      lastError = `Upload failed (HTTP ${response.status})${detail ? `: ${detail}` : "."}`;
-      // Retry transient server/rate-limit errors; fail fast on client errors.
-      if (response.status < 500 && response.status !== 429) break;
+      return;
     } catch (error) {
-      lastError = error instanceof DOMException && error.name === "AbortError"
-        ? "Upload timed out. Please try again."
-        : error instanceof Error ? error.message : "Network error during upload.";
-    } finally {
-      window.clearTimeout(timeout);
-    }
-    if (attempt < attempts) {
-      const delay = Math.min(1000 * 2 ** (attempt - 1), 8000) + Math.floor(Math.random() * 500);
+      lastError = error instanceof Error ? error.message : "Could not upload the image.";
+      if (attempt === attempts) break;
+      const delay = Math.min(1000 * 2 ** (attempt - 1), 8000);
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }

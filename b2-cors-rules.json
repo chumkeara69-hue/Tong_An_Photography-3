@@ -1,11 +1,8 @@
 [
   {
     "corsRuleName": "tongAnUpload",
-    "allowedOrigins": [
-      "https://*.vercel.app",
-      "http://localhost:3000"
-    ],
-    "allowedMethods": ["PUT", "GET", "HEAD"],
+    "allowedOrigins": ["https://*.vercel.app", "http://localhost:3000"],
+    "allowedOperations": ["S3 Put Object", "S3 Get Object", "S3 Head Object"],
     "allowedHeaders": ["*"],
     "exposeHeaders": ["ETag", "Content-Length", "Content-Type"],
     "maxAgeSeconds": 86400
