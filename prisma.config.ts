@@ -4,7 +4,7 @@ import { defineConfig } from "prisma/config";
 const databaseUrl = process.env.DIRECT_URL || process.env.DATABASE_URL;
 
 if (!databaseUrl) {
-  throw new Error("DATABASE_URL or DIRECT_URL must be set.");
+  throw new Error("DATABASE_URL or DIRECT_URL must be set in the deployment environment.");
 }
 
 export default defineConfig({

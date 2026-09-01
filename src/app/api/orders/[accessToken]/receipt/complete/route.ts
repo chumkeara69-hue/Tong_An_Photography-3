@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { verifyObject } from "@/lib/storage";
 
 export async function POST(req: Request, { params }: { params: Promise<{ accessToken: string }> }) {
   try {
@@ -14,6 +15,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ accessT
     if (!key.startsWith(`payment-proofs/${order.id}-`)) {
       return NextResponse.json({ error: "Invalid payment proof." }, { status: 400 });
     }
+
+    // Confirm the browser upload actually reached private B2 before saving it in PostgreSQL.
+    await verifyObject(key);
+
     const updated = await prisma.order.update({
       where: { id: order.id },
       data: { paymentProofStorageKey: key, paymentStatus: "PENDING", orderStatus: "PROCESSING" },

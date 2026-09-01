@@ -1,84 +1,36 @@
-"use client";
+import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { createSession } from "@/lib/auth";
 
-import { FormEvent, useState } from "react";
+const schema = z.object({
+  email: z.email(),
+  password: z.string().min(8),
+});
 
-export default function AdminLogin() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+export async function POST(req: Request) {
+  try {
+    const body = schema.parse(await req.json());
+    const email = body.email.trim().toLowerCase();
 
-  async function submit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+    const user = await prisma.user.findUnique({ where: { email } });
 
-    try {
-      const r = await fetch("/api/auth/login", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await r.json().catch(() => ({}));
-
-      if (r.ok) {
-        window.location.href = "/admin";
-        return;
-      }
-
-      setError(data.error || "Login failed");
-    } catch {
-      setError("Network error");
-    } finally {
-      setLoading(false);
+    if (
+      !user ||
+      user.role !== "ADMIN" ||
+      !user.passwordHash ||
+      !(await bcrypt.compare(body.password, user.passwordHash))
+    ) {
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
+
+    await createSession(user.id);
+    return NextResponse.json(
+      { ok: true, role: user.role },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  } catch {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
-
-  return (
-    <main
-      className="container"
-      style={{ padding: "70px 0", maxWidth: 520 }}
-    >
-      <div className="card" style={{ padding: 28 }}>
-        <h1>Admin Login</h1>
-
-        <form
-          onSubmit={submit}
-          style={{ display: "grid", gap: 16, marginTop: 20 }}
-        >
-          <div>
-            <label className="label">Email</label>
-            <input
-              className="input"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-
-          <div>
-            <label className="label">Password</label>
-            <input
-              className="input"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-
-          {error && <p style={{ color: "#fca5a5" }}>{error}</p>}
-
-          <button className="btn btn-gold" disabled={loading}>
-            {loading ? "Signing in..." : "Login"}
-          </button>
-        </form>
-      </div>
-    </main>
-  );
 }

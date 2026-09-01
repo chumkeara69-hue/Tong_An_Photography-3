@@ -11,101 +11,62 @@ function hashToken(token: string) {
 
 export async function createSession(userId: string) {
   const token = crypto.randomBytes(32).toString("hex");
-  const expiresAt = new Date(Date.now() + TTL_DAYS * 24 * 60 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + TTL_DAYS * 86400000);
 
   await prisma.session.create({
-    data: {
-      tokenHash: hashToken(token),
-      userId,
-      expiresAt,
-    },
+    data: { tokenHash: hashToken(token), userId, expiresAt },
   });
 
   const store = await cookies();
-
-  store.set({
-    name: COOKIE,
-    value: token,
+  store.set(COOKIE, token, {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: TTL_DAYS * 24 * 60 * 60,
+    expires: expiresAt,
   });
-
-  return token;
 }
 
 export async function destroySession() {
   const store = await cookies();
   const token = store.get(COOKIE)?.value;
-
   if (token) {
     await prisma.session.deleteMany({
-      where: {
-        tokenHash: hashToken(token),
-      },
+      where: { tokenHash: hashToken(token) },
     });
   }
-
   store.delete(COOKIE);
 }
 
 export async function getCurrentUser() {
   const store = await cookies();
   const token = store.get(COOKIE)?.value;
-
   if (!token) return null;
 
   const session = await prisma.session.findUnique({
-    where: {
-      tokenHash: hashToken(token),
-    },
-    include: {
-      user: true,
-    },
+    where: { tokenHash: hashToken(token) },
+    include: { user: true },
   });
 
   if (!session) return null;
-
-  if (
-    !session.user ||
-    (session.user.role !== "ADMIN" &&
-      session.user.role !== "CUSTOMER")
-  ) {
-    return null;
-  }
-
+  if (!session.user || session.user.role !== "ADMIN" && session.user.role !== "CUSTOMER") return null;
   if (session.expiresAt <= new Date()) {
-    await prisma.session
-      .delete({
-        where: { id: session.id },
-      })
-      .catch(() => {});
-
+    await prisma.session.delete({ where: { id: session.id } }).catch(() => {});
     return null;
   }
 
-  const nextExpiry = new Date(
-    Date.now() + TTL_DAYS * 24 * 60 * 60 * 1000,
-  );
+  const nextExpiry = new Date(Date.now() + TTL_DAYS * 86400000);
+  await prisma.session.update({ where: { id: session.id }, data: { expiresAt: nextExpiry } }).catch(() => {});
 
-  await prisma.session
-    .update({
-      where: { id: session.id },
-      data: { expiresAt: nextExpiry },
-    })
-    .catch(() => {});
-
+  // Do not modify cookies here. This function is used by Server Components
+  // where cookies().set() is not allowed in Next.js.
   return session.user;
 }
 
 export async function requireAdmin() {
   const user = await getCurrentUser();
-
   if (!user || user.role !== "ADMIN") {
     throw new Error("UNAUTHORIZED");
   }
-
   return user;
 }

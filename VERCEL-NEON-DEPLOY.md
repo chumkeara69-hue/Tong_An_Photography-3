@@ -71,3 +71,11 @@ If you see `UNAUTHORIZED`, verify in this order:
 ## Important
 
 The Backblaze credentials supplied during setup must never be committed to GitHub. If a real Application Key has been pasted into chat, rotate/revoke it in Backblaze and create a fresh key before production.
+
+
+## Mandatory before Deploy
+
+`DATABASE_URL` is mandatory for the running website. `DIRECT_URL` is recommended for Prisma migrations.
+Do not use placeholder values such as `YOUR_POSTGRES_DATABASE_URL`.
+
+For photo uploads, the Backblaze B2 bucket must also have the included CORS rule applied. The bucket should remain private.

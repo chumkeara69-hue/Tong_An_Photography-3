@@ -39,3 +39,5 @@ if (!/^https:\/\/s3\.[a-z0-9-]+\.backblazeb2\.com$/i.test(endpoint)) {
 
 
 console.log("Production environment variables look configured for Backblaze B2 + Vercel.");
+
+// Production requires DATABASE_URL for runtime and DIRECT_URL or DATABASE_URL for Prisma migrations.
