@@ -23,6 +23,7 @@ export async function createSession(userId: string) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
+    maxAge: TTL_DAYS * 24 * 60 * 60,
     expires: expiresAt,
   });
 }
@@ -69,4 +70,41 @@ export async function requireAdmin() {
     throw new Error("UNAUTHORIZED");
   }
   return user;
+}
+
+
+/**
+ * Refresh the browser session cookie from a route handler.
+ * Server Components must not call cookies().set(), so upload/login flows
+ * can explicitly refresh the cookie when they are handling a request.
+ */
+export async function refreshSessionCookie() {
+  const store = await cookies();
+  const token = store.get(COOKIE)?.value;
+  if (!token) return false;
+
+  const session = await prisma.session.findUnique({
+    where: { tokenHash: hashToken(token) },
+    include: { user: true },
+  });
+
+  if (!session || !session.user || session.user.role !== "ADMIN") return false;
+  if (session.expiresAt <= new Date()) return false;
+
+  const expiresAt = new Date(Date.now() + TTL_DAYS * 86400000);
+  await prisma.session.update({
+    where: { id: session.id },
+    data: { expiresAt },
+  });
+
+  store.set(COOKIE, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: TTL_DAYS * 24 * 60 * 60,
+    expires: expiresAt,
+  });
+
+  return true;
 }

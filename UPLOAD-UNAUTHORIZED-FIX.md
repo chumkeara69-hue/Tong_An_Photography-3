@@ -46,3 +46,15 @@ Set ADMIN_EMAIL and ADMIN_PASSWORD in the deployment environment, then run:
 `npm run db:seed:prod`
 
 Do not put the password into Git, this ZIP, or `.env.example`.
+
+
+## Session persistence hardening
+
+This revision:
+- explicitly sends same-origin credentials on admin login;
+- refreshes the admin session cookie before and after a long B2 upload;
+- retries photo completion once after a transient HTTP 401;
+- keeps the short-lived signed completion token as the fallback for a session lost during B2 upload.
+
+After deploying, test from the same Vercel origin used for login. Do not switch between
+different Vercel deployment URLs during the login/upload flow.

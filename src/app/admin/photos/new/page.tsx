@@ -61,6 +61,13 @@ export default function NewPhoto() {
         if (file.size > MAX_IMAGE_BYTES) throw new Error("Each image must be smaller than 25 MB.");
       }
 
+      // Keep the 7-day admin cookie fresh before a potentially long upload.
+      await fetch("/api/auth/refresh", {
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+      }).catch(() => {});
+
       const p = await fetch("/api/admin/photos/presign", {
         method: "POST",
         credentials: "same-origin",
@@ -85,22 +92,52 @@ export default function NewPhoto() {
         uploadWithRetry(urls.preview.url, preview),
       ]);
 
-      const c = await fetch("/api/admin/photos/complete", {
+      const completionBody = {
+        ...data,
+        priceCents: Math.round(Number(data.price) * 100),
+        originalStorageKey: urls.original.key,
+        previewStorageKey: urls.preview.key,
+        originalSize: original.size,
+        previewSize: preview.size,
+        originalContentType: original.type,
+        previewContentType: preview.type,
+        completionToken: urls.completionToken,
+      };
+
+      // Refresh once more after the B2 PUTs. If the normal session cookie was
+      // lost during the upload, the signed completion token can still authorize
+      // this specific completion request.
+      await fetch("/api/auth/refresh", {
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+      }).catch(() => {});
+
+      let c = await fetch("/api/admin/photos/complete", {
         method: "POST",
         credentials: "same-origin",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          priceCents: Math.round(Number(data.price) * 100),
-          originalStorageKey: urls.original.key,
-          previewStorageKey: urls.preview.key,
-          originalSize: original.size,
-          previewSize: preview.size,
-          originalContentType: original.type,
-          previewContentType: preview.type,
-          completionToken: urls.completionToken,
-        }),
+        cache: "no-store",
+        body: JSON.stringify(completionBody),
       });
+
+      // One retry after refreshing the session avoids a false login redirect
+      // caused by a transient/stale session cookie.
+      if (c.status === 401) {
+        await fetch("/api/auth/refresh", {
+          method: "POST",
+          credentials: "same-origin",
+          cache: "no-store",
+        }).catch(() => {});
+        c = await fetch("/api/admin/photos/complete", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "content-type": "application/json" },
+          cache: "no-store",
+          body: JSON.stringify(completionBody),
+        });
+      }
+
       const result = await c.json().catch(() => ({}));
       if (!c.ok) throw new Error(result.error || `Could not save photo (HTTP ${c.status}).`);
       r.push("/admin");
