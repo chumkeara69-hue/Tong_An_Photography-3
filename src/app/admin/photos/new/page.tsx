@@ -83,7 +83,7 @@ export default function NewPhoto() {
       });
       const urls = await p.json().catch(() => ({}));
       if (p.status === 401) {
-        window.location.href="/admin/login"; return;
+        throw new Error("Your admin session is no longer valid. Please log in again before starting this upload.");
       }
       if (!p.ok) throw new Error(urls.error || `Could not prepare the upload (HTTP ${p.status}).`);
 

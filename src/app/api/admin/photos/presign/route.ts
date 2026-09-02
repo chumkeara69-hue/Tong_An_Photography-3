@@ -18,7 +18,7 @@ function safeFilename(name: string, fallback: string) {
 
 export async function POST(req: Request) {
   try {
-    await requireAdmin();
+    const admin = await requireAdmin();
     const b = await req.json();
     const originalName = String(b.originalName || "");
     const previewName = String(b.previewName || "");
@@ -56,6 +56,7 @@ export async function POST(req: Request) {
     // contains no credentials.
     const secret = process.env.SESSION_SECRET || process.env.NEXTAUTH_SECRET || process.env.DATABASE_URL || "tong-an-upload";
     const payload = Buffer.from(JSON.stringify({
+      userId: admin.id,
       originalKey, previewKey, originalSize, previewSize, originalType, previewType,
       exp: Date.now() + 15 * 60 * 1000,
     })).toString("base64url");

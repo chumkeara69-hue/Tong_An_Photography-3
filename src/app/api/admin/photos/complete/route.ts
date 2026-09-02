@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
-import { requireAdmin } from "@/lib/auth";
+import { createSession, requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 import { verifyObject } from "@/lib/storage";
@@ -34,6 +34,14 @@ export async function POST(req: Request) {
       if (b.originalStorageKey !== tokenData.originalKey || b.previewStorageKey !== tokenData.previewKey) {
         return NextResponse.json({ error: "Upload token does not match the uploaded files." }, { status: 400 });
       }
+      if (!tokenData.userId) {
+        return NextResponse.json({ error: "Upload token is missing its admin session binding. Please start the upload again." }, { status: 401 });
+      }
+      // The upload itself may have taken long enough for the browser session
+      // to disappear. Re-create a fresh admin session for the same user before
+      // returning success, so the subsequent /admin navigation does not bounce
+      // back to the login page.
+      await createSession(String(tokenData.userId));
     }
     const title = String(b.title || "").trim();
     const categoryName = String(b.category || "").trim();
